@@ -2,6 +2,7 @@ import sys
 from io import BytesIO
 from flask import Flask, request, jsonify
 import openai
+import os
 
 # -------------------------------
 # FLASK APP SETUP
@@ -10,7 +11,9 @@ app = Flask(__name__)
 
 # Configuration (Customize as needed)
 app.config["SECRET_KEY"] = "1234"
-app.config["OPENAI_API_KEY"] = "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"  # Replace with actual key
+
+
+app.config["OPENAI_API_KEY"] = os.environ.get("OPENAI_API_KEY")  # or ["OPENAI_API_KEY"] if you prefer
 openai.api_key = app.config["OPENAI_API_KEY"]
 
 # -------------------------------
