@@ -1,11 +1,14 @@
 import os
 from flask import Flask, request, jsonify
 import openai
+from flask_cors import CORS  # <-- Import flask-cors
 
 # -------------------------------
 # FLASK APP SETUP
 # -------------------------------
 app = Flask(__name__)
+CORS(app)  # <-- Enable CORS for all routes
+
 
 # Configuration
 app.config["SECRET_KEY"] = "1234"
