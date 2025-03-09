@@ -250,7 +250,7 @@
       }
       chatInput.addEventListener('input', autoResize);
 
-      // Append message function
+      // Append message to chat log
       function appendMessage(sender, text) {
         const msgDiv = document.createElement('div');
         msgDiv.classList.add('message', sender);
@@ -269,36 +269,61 @@
         return typingDiv;
       }
 
-      // Handle send message and fetch backend response
+      // Handle send message & fetch backend response
       async function sendMessage() {
         const userText = chatInput.value.trim();
         if (!userText) return;
+
+        // Show user message
         appendMessage('user', userText);
+
+        // Clear input
         chatInput.value = '';
         autoResize();
         chatInput.focus();
 
+        // Show typing indicator
         const typingIndicator = showTypingIndicator();
 
+        // Debug logs to see if method is actually POST
+        console.log('Sending POST request to /generate-plan with prompt:', userText);
+
         try {
-          // Using a relative URL so that it works on both local and deployed environments
           const response = await fetch('/generate-plan', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ prompt: userText })
           });
+
+          // More debug logs
+          console.log('Response status:', response.status);
+
+          // If the server returns 405 or another error, let's see the text
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP Error ${response.status}: ${errorText}`);
+          }
+
+          // Parse JSON
           const data = await response.json();
+          console.log('Received JSON:', data);
+
           setTimeout(() => {
             typingIndicator.remove();
             appendMessage('bot', 'Your roadmap: ' + data.roadmap);
           }, 1500);
+
         } catch (error) {
           typingIndicator.remove();
           appendMessage('bot', 'Error: ' + error.message);
+          console.error('Fetch error:', error);
         }
       }
 
+      // Button click event
       sendButton.addEventListener('click', sendMessage);
+
+      // Enter key event
       chatInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault();
