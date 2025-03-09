@@ -1,19 +1,18 @@
 import os
 from flask import Flask, request, jsonify
 import openai
-from flask_cors import CORS
 
 # -------------------------------
 # FLASK APP SETUP
 # -------------------------------
 app = Flask(__name__)
-CORS(app)  # Enable CORS to handle cross-origin requests
 
-# Configuration: use environment variable for OpenAI API key
+# Configuration
 app.config["SECRET_KEY"] = "1234"
+
+# Set OpenAI API key from environment variable.
+# Make sure you set OPENAI_API_KEY in Vercel’s Environment Variables.
 openai.api_key = os.environ.get("OPENAI_API_KEY")
-if not openai.api_key:
-    print("WARNING: OPENAI_API_KEY environment variable is not set!")
 
 # -------------------------------
 # FLASK ROUTES
@@ -21,21 +20,21 @@ if not openai.api_key:
 
 @app.route("/")
 def index():
-    # Simple route to test server status
     return "Hello from Flask! This is your Roadmap Planner Chatbot."
 
 @app.route("/generate-plan", methods=["POST"])
 def generate_plan():
     """
-    Expects JSON: { "prompt": "your prompt" }
-    Returns JSON: { "roadmap": "generated text" }
+    This route accepts a POST request with JSON body: { "prompt": "your text" }.
+    It calls the OpenAI API and returns a generated roadmap.
     """
     data = request.get_json(silent=True)
     if not data:
-        return jsonify({"roadmap": "Error: No valid JSON provided."}), 400
+        return jsonify({"roadmap": "Error: No valid JSON body provided."}), 400
 
     prompt = data.get("prompt", "")
     try:
+        # Check if API key is set; if not, raise an error.
         if not openai.api_key:
             raise ValueError("OpenAI API key is not set. Please set it as an environment variable.")
         
@@ -54,12 +53,12 @@ def generate_plan():
 @app.route("/fetch-resources", methods=["POST"])
 def fetch_resources():
     """
-    Expects JSON: { "category": "Technology" }
-    Returns JSON: { "resources": [ ... ] }
+    This route accepts a POST request with JSON body: { "category": "Technology" }.
+    It returns a list of sample learning resources.
     """
     data = request.get_json(silent=True)
     if not data:
-        return jsonify({"resources": ["Error: No valid JSON provided."]}), 400
+        return jsonify({"resources": ["Error: No valid JSON body provided."]}), 400
 
     category = data.get("category", "")
     resources = {
@@ -74,7 +73,7 @@ def fetch_resources():
 @app.route("/schedule-plan", methods=["POST"])
 def schedule_plan():
     """
-    Returns a sample 4-day schedule plan.
+    This route returns a sample 4-day schedule plan.
     """
     schedule = [
         {"day": "Day 1", "activities": "Introduction and basics"},
@@ -87,7 +86,7 @@ def schedule_plan():
 @app.route("/page")
 def serve_page():
     """
-    Serves the static index.html file.
+    Serves the static index.html file if you want to display a page.
     """
     try:
         with open("index.html", "r", encoding="utf-8") as f:
@@ -95,17 +94,6 @@ def serve_page():
         return content, 200, {"Content-Type": "text/html"}
     except Exception as e:
         return f"Error reading index.html: {e}", 500
-
-# -------------------------------
-# GLOBAL ERROR HANDLERS
-# -------------------------------
-@app.errorhandler(405)
-def method_not_allowed(e):
-    return jsonify({"error": "Method Not Allowed. Please use POST."}), 405
-
-@app.errorhandler(500)
-def internal_error(e):
-    return jsonify({"error": "Internal Server Error"}), 500
 
 # -------------------------------
 # LOCAL TESTING (OPTIONAL)
