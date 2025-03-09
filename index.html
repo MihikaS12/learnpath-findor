@@ -281,7 +281,7 @@
         const typingIndicator = showTypingIndicator();
 
         try {
-          // Changed endpoint to a relative URL so it works in deployed environment
+          // Using a relative URL so that it works on both local and deployed environments
           const response = await fetch('/generate-plan', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
