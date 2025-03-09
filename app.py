@@ -1,37 +1,43 @@
-import sys
-from io import BytesIO
+import os
 from flask import Flask, request, jsonify
 import openai
-import os
 
 # -------------------------------
 # FLASK APP SETUP
 # -------------------------------
 app = Flask(__name__)
 
-# Configuration (Customize as needed)
+# Configuration
 app.config["SECRET_KEY"] = "1234"
 
-
-app.config["OPENAI_API_KEY"] = os.environ.get("OPENAI_API_KEY")  # or ["OPENAI_API_KEY"] if you prefer
-openai.api_key = app.config["OPENAI_API_KEY"]
+# Set OpenAI API key from environment variable.
+# Make sure you set OPENAI_API_KEY in Vercel’s Environment Variables.
+openai.api_key = os.environ.get("OPENAI_API_KEY")
 
 # -------------------------------
 # FLASK ROUTES
 # -------------------------------
 
-# Example route to test if your server is running
 @app.route("/")
 def index():
-    return "Hello from Flask (Custom Adapter)!"
+    return "Hello from Flask! This is your Roadmap Planner Chatbot."
 
-# Route: Generate Plan
 @app.route("/generate-plan", methods=["POST"])
 def generate_plan():
-    data = request.get_json()
-    prompt = data.get('prompt', '')
+    """
+    This route accepts a POST request with JSON body: { "prompt": "your text" }.
+    It calls the OpenAI API and returns a generated roadmap.
+    """
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({"roadmap": "Error: No valid JSON body provided."}), 400
 
+    prompt = data.get("prompt", "")
     try:
+        # Check if API key is set; if not, raise an error.
+        if not openai.api_key:
+            raise ValueError("OpenAI API key is not set. Please set it as an environment variable.")
+        
         response = openai.Completion.create(
             engine="text-davinci-003",
             prompt=prompt,
@@ -41,28 +47,34 @@ def generate_plan():
         generated_text = response.choices[0].text.strip()
     except Exception as e:
         generated_text = f"Error generating plan: {str(e)}"
-
+    
     return jsonify({"roadmap": generated_text})
 
-# Route: Fetch Resources
 @app.route("/fetch-resources", methods=["POST"])
 def fetch_resources():
-    data = request.get_json()
-    category = data.get('category', '')
+    """
+    This route accepts a POST request with JSON body: { "category": "Technology" }.
+    It returns a list of sample learning resources.
+    """
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({"resources": ["Error: No valid JSON body provided."]}), 400
 
+    category = data.get("category", "")
     resources = {
         "Technology": ["Coursera - Python for Everybody", "Udemy - Web Dev Bootcamp"],
         "Business": ["edX - Business Foundations", "LinkedIn Learning - Marketing Strategies"],
         "Creative Arts": ["Skillshare - Graphic Design Basics", "Udemy - Creative Photography"],
         "Personal Development": ["Coursera - Learning How to Learn", "Udemy - Time Management"]
     }
-
     result = resources.get(category, ["No resources available for this category"])
     return jsonify({"resources": result})
 
-# Route: Schedule Plan
 @app.route("/schedule-plan", methods=["POST"])
 def schedule_plan():
+    """
+    This route returns a sample 4-day schedule plan.
+    """
     schedule = [
         {"day": "Day 1", "activities": "Introduction and basics"},
         {"day": "Day 2", "activities": "Intermediate topics"},
@@ -71,70 +83,17 @@ def schedule_plan():
     ]
     return jsonify({"schedule": schedule})
 
-# Optional route to serve index.html from disk (if you want to display a page)
 @app.route("/page")
 def serve_page():
-    with open("index.html", "r", encoding="utf-8") as f:
-        content = f.read()
-    return content, 200, {"Content-Type": "text/html"}
-
-# -------------------------------
-# CUSTOM HANDLER FOR VERCEL
-# -------------------------------
-def handler(vercel_request, context):
     """
-    This function is the entry point for the Vercel serverless function.
-    We manually convert the Vercel request into a WSGI environ dict,
-    call the Flask app, and return a response in Vercel's format.
+    Serves the static index.html file if you want to display a page.
     """
-
-    # 1) Build a WSGI environ dictionary from the Vercel request.
-    environ = {
-        "REQUEST_METHOD": vercel_request.method,
-        "PATH_INFO": vercel_request.path or "/",
-        "QUERY_STRING": vercel_request.query or "",
-        "SERVER_NAME": "localhost",
-        "SERVER_PORT": "80",
-        "wsgi.version": (1, 0),
-        "wsgi.input": BytesIO(vercel_request.body or b""),
-        "wsgi.errors": sys.stderr,
-        "wsgi.run_once": False,
-        "wsgi.url_scheme": "http",
-        "wsgi.multithread": False,
-        "wsgi.multiprocess": False,
-    }
-
-    # 2) Capture the Flask response status and headers via start_response.
-    response_status = []
-    response_headers = []
-
-    def start_response(status, headers, exc_info=None):
-        response_status.append(status)
-        response_headers.extend(headers)
-
-    # 3) Call the Flask WSGI app.
-    response_iter = app(environ, start_response)
-    response_body = b"".join(response_iter)
-
-    # 4) Parse the status code (e.g., "200 OK" -> 200).
-    if response_status:
-        status_code_str = response_status[0].split()[0]
-        try:
-            status_code = int(status_code_str)
-        except ValueError:
-            status_code = 500
-    else:
-        status_code = 500
-
-    # Convert headers list to a dictionary
-    headers_dict = {k: v for k, v in response_headers}
-
-    # 5) Return the data in Vercel's expected format
-    return {
-        "statusCode": status_code,
-        "headers": headers_dict,
-        "body": response_body.decode("utf-8")
-    }
+    try:
+        with open("index.html", "r", encoding="utf-8") as f:
+            content = f.read()
+        return content, 200, {"Content-Type": "text/html"}
+    except Exception as e:
+        return f"Error reading index.html: {e}", 500
 
 # -------------------------------
 # LOCAL TESTING (OPTIONAL)
