@@ -16,7 +16,8 @@ const openai = new OpenAI({
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '.')));
+app.use(express.static(path.join(__dirname, 'public')));
+
 
 // API Routes
 app.post('/api/chat', async (req, res) => {
